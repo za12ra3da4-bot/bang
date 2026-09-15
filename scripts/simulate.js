@@ -58,8 +58,8 @@ function runOne(i) {
   console.log(`${GAMES}판 완료 (4~7인 번갈아)`);
   console.log('승리 진영:', stats);
   console.log(`턴 수: 최소 ${turns[0]} / 중앙 ${turns[Math.floor(turns.length / 2)]} / 최대 ${turns[turns.length - 1]}`);
-  process.exit(0);
+  setTimeout(() => process.exit(0), 50);
 })().catch((e) => {
   console.error('실패:', e.message);
-  process.exit(1);
+  setTimeout(() => process.exit(1), 50);
 });
