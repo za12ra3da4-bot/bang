@@ -90,7 +90,9 @@ class Game {
   }
   pause(ms) {
     return new Promise((resolve, reject) => {
-      setTimeout(() => (this.dead ? reject(new Abort()) : resolve()), ms * PACE);
+      const go = () => (this.dead ? reject(new Abort()) : resolve());
+      if (PACE === 0) setImmediate(go);
+      else setTimeout(go, ms * PACE);
     });
   }
   nextIdx(i) {
@@ -177,7 +179,9 @@ class Game {
     const p = this.pl(pr.pid);
     if (p.isBot) {
       pr.deadline = null;
-      pr.timer = setTimeout(() => this.settle(pr, this.decide(p, pr.type, pr.data)), botDelay(pr.type) * PACE);
+      const run = () => this.settle(pr, this.decide(p, pr.type, pr.data));
+      if (PACE === 0) setImmediate(run);
+      else pr.timer = setTimeout(run, botDelay(pr.type) * PACE);
       return;
     }
     const online = this.hooks.isOnline(p.pid);
