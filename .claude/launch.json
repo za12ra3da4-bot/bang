@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "황야의뱅",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/PC/Desktop/새 폴더 (2)/bang/server.js",
+        "3060"
+      ],
+      "port": 3060
+    }
+  ]
+}

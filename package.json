@@ -1,0 +1,20 @@
+{
+  "name": "bang-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "황야의 뱅 - 친구들과 함께하는 온라인 서부 총잡이 카드게임",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "assets": "node scripts/gen-assets.js",
+    "sim": "node scripts/simulate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
