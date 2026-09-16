@@ -7,6 +7,7 @@ const { TYPES } = B;
 const T_PLAY = 90_000;
 const T_RESP = 25_000;
 const T_OFFLINE = 5_000;
+const T_SETUP = 30_000;   // 캐릭터 고르는 시간
 const LOG_MAX = 220;
 
 let PACE = 1;
@@ -39,13 +40,14 @@ class Game {
     this.hooks = hooks;
     this.id = crypto.randomBytes(6).toString('hex');
     const roles = shuffle([...B.ROLE_SETS[seats.length]]);
+    // 실제 뱅처럼 각자 캐릭터 2장을 받고 그중 1명을 고른다 (겹치지 않게 나눠 준다)
     const chars = shuffle(B.CHARACTERS.map((c) => c.id));
-    this.players = seats.map((s, i) => {
-      const role = roles[i];
-      const char = chars[i];
-      const maxHp = B.CHAR[char].hp + (role === 'sheriff' ? 1 : 0);
-      return { pid: s.pid, name: s.name, isBot: !!s.isBot, seat: i, role, char, maxHp, hp: maxHp, hand: [], equip: [], alive: true };
-    });
+    this.players = seats.map((s, i) => ({
+      pid: s.pid, name: s.name, isBot: !!s.isBot, seat: i,
+      role: roles[i],
+      charChoices: [chars[i * 2], chars[i * 2 + 1]],
+      char: null, maxHp: 0, hp: 0, hand: [], equip: [], alive: true,
+    }));
     this.deck = shuffle(B.DECK.map((c) => ({ ...c })));
     this.discard = [];
     this.limbo = [];
@@ -61,10 +63,66 @@ class Game {
     this.hostile = new Map();
     this.over = null;
     this.dead = false;
+    this.phase = 'setup';
+    this.setupTimer = null;
+    this.setupDeadline = 0;
 
-    for (const p of this.players) this.give(p, p.hp);
     this.turnIdx = this.players.findIndex((p) => p.role === 'sheriff');
     this.addLog('story', '황야의 마을에 총성이 울립니다. 보안관은 모두에게 공개되고, 나머지 역할은 비밀입니다.');
+    this.addLog('story', '각자 받은 캐릭터 2명 중 한 명을 고르세요.');
+
+    // ── 캐릭터 고르기 (모두 동시에)
+    this.phase = 'setup';
+    this.setupDeadline = Date.now() + T_SETUP;
+    this.setupTimer = setTimeout(() => this.finishSetup(), T_SETUP);
+    for (const p of this.players) {
+      if (!p.isBot) continue;
+      setTimeout(() => this.pickChar(p.pid, this.botPickChar(p)), (400 + rand(900)) * PACE);
+    }
+    this.changed();
+  }
+
+  /** 봇은 체력이 높고 능력이 센 쪽을 고른다 */
+  botPickChar(p) {
+    const score = (id) => {
+      const c = B.CHAR[id];
+      const bonus = { will: 3, cole: 3, vic: 2, jordan: 2, ben: 2, kit: 2, luke: 1, janet: 1, rose: 1 }[id] || 0;
+      return c.hp * 2 + bonus + rand(2);
+    };
+    const [a, b] = p.charChoices;
+    return score(a) >= score(b) ? a : b;
+  }
+
+  /** 사람이 캐릭터를 골랐을 때 */
+  pickChar(pid, charId) {
+    if (this.dead || this.phase !== 'setup') return err('지금은 캐릭터를 고를 수 없습니다');
+    const p = this.pl(pid);
+    if (!p) return err('참가자가 아닙니다');
+    if (p.char) return err('이미 골랐습니다');
+    if (!p.charChoices.includes(charId)) return err('내가 받은 캐릭터가 아닙니다');
+    p.char = charId;
+    if (this.players.every((q) => q.char)) {
+      clearTimeout(this.setupTimer);
+      this.finishSetup();
+    } else {
+      this.changed();
+    }
+    return ok();
+  }
+
+  /** 아직 안 고른 사람은 첫 번째 캐릭터로 정하고 게임을 시작한다 */
+  finishSetup() {
+    if (this.dead || this.phase !== 'setup') return;
+    clearTimeout(this.setupTimer);
+    for (const p of this.players) {
+      if (!p.char) p.char = p.charChoices[0];
+      p.maxHp = B.CHAR[p.char].hp + (p.role === 'sheriff' ? 1 : 0);
+      p.hp = p.maxHp;
+      this.addLog('ability', `{p:${p.pid}} ${B.CHAR[p.char].name} 선택 (체력 ${p.maxHp})`);
+    }
+    this.phase = 'play';
+    for (const p of this.players) this.give(p, p.hp);
+    this.changed();
     setImmediate(() => this.run());
   }
 
@@ -810,6 +868,7 @@ class Game {
   }
 
   finish(result) {
+    this.phase = 'over';
     this.over = {
       winners: result.winners,
       roles: this.players.map((p) => ({ pid: p.pid, role: p.role, alive: p.alive })),
@@ -1016,12 +1075,19 @@ class Game {
     const over = !!this.over;
     return {
       id: this.id,
-      phase: over ? 'over' : 'play',
+      phase: over ? 'over' : this.phase,
       players: this.players.map((p) => ({
         pid: p.pid, name: p.name, isBot: p.isBot, seat: p.seat, char: p.char, hp: p.hp, maxHp: p.maxHp, alive: p.alive,
         handCount: p.hand.length, equip: p.equip, online: p.isBot || this.hooks.isOnline(p.pid),
         role: p.role === 'sheriff' || !p.alive || over || p.pid === pid ? p.role : null,
+        picked: !!p.char,
       })),
+      setup: this.phase === 'setup' ? {
+        choices: me ? me.charChoices : [],
+        myPick: me ? me.char : null,
+        deadlineIn: Math.max(0, this.setupDeadline - Date.now()),
+        waiting: this.players.filter((p) => !p.char).map((p) => p.pid),
+      } : null,
       me: me ? { pid, hand: me.hand, role: me.role } : null,
       deckCount: this.deck.length,
       discardTop: this.discard.length ? this.discard[this.discard.length - 1] : null,
@@ -1049,6 +1115,7 @@ class Game {
 
   destroy() {
     this.dead = true;
+    clearTimeout(this.setupTimer);
     const pr = this.prompt;
     this.prompt = null;
     if (pr) {

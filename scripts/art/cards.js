@@ -111,8 +111,44 @@ function rifle({ len, receiver, lever }) {
   </g>`;
 }
 
-const art = (body, { rays = true, bg = 'url(#pap)', extraDefs = '' } = {}) =>
-  svg(240, 190, `<rect width="240" height="190" fill="${bg}"/>${rays ? sunRays(120, 100, '#fff3cf', 0.45) : ''}${body}<rect width="240" height="190" fill="url(#vig)"/><rect width="240" height="190" filter="url(#grain)" opacity=".18"/>`, { defs: DEFS + extraDefs });
+const SCENE_DEFS = [
+  rad('sky', [[0, '#ffeab4'], [0.42, '#efb864'], [1, '#c0783a']], 0.5, 0.4, 0.85),
+  lin('dirt', [[0, '#a4652f'], [1, '#6b3c18']]),
+  rad('vig2', [[0.5, '#000', 0], [1, '#2a1708', 0.6]], 0.5, 0.48, 0.74),
+  `<filter id="mono"><feColorMatrix type="saturate" values="0.06"/><feComponentTransfer><feFuncR type="linear" slope="1.05" intercept="0.02"/><feFuncG type="linear" slope="1.02"/><feFuncB type="linear" slope="0.98"/></feComponentTransfer></filter>`,
+].join('');
+
+/** 먼 산 - 그림 뒤쪽 */
+const SCENE_BACK = `
+  <path d="M0 158L28 132L50 146L76 118L102 142L128 122L156 146L184 124L212 144L240 130V300H0Z" fill="#b9793f" opacity=".42"/>
+  <path d="M0 186L34 166L62 182L92 160L124 184L154 164L188 184L216 166L240 180V300H0Z" fill="#8d5526" opacity=".5"/>`;
+
+/** 앞쪽 땅 - 그림 위에 덮여 깊이를 만든다 */
+const SCENE_FRONT = `
+  <path d="M0 262Q60 250 124 258T240 252V300H0Z" fill="url(#dirt)"/>
+  <path d="M0 276Q70 268 132 274T240 270V300H0Z" fill="#5a3014" opacity=".75"/>
+  <g fill="#3a1d0a" opacity=".7">
+    <ellipse cx="26" cy="284" rx="15" ry="5"/><ellipse cx="206" cy="290" rx="19" ry="6"/>
+    <path d="M214 272c0-8 3-13 6-13s6 5 6 13v14h-12z"/>
+    <path d="M214 276c-5 0-8-4-8-9s2-6 4-6 4 3 4 8zM226 274c5 0 9-4 9-10s-2-7-4-7-4 4-4 9z"/>
+  </g>`;
+
+/**
+ * 실제 뱅 카드처럼 그림이 카드 한 면을 가득 채운다 (240×300).
+ * mono: 무기 카드는 실제 뱅처럼 흑백 일러스트로 그린다.
+ */
+const art = (body, { rays = true, bg = 'url(#sky)', extraDefs = '', mono = false, lift = 46 } = {}) => {
+  const inner = `
+    <rect width="240" height="300" fill="${bg}"/>
+    ${rays ? sunRays(120, 120, '#fff3cf', 0.32) : ''}
+    ${SCENE_BACK}
+    <g transform="translate(0 ${lift})">${body}</g>
+    ${SCENE_FRONT}`;
+  return svg(240, 300, `
+    ${mono ? `<g filter="url(#mono)">${inner}</g>` : inner}
+    <rect width="240" height="300" fill="url(#vig2)"/>
+    <rect width="240" height="300" filter="url(#grain)" opacity=".2"/>`, { defs: DEFS + SCENE_DEFS + extraDefs });
+};
 
 const r1 = rng(3);
 const bubbles = Array.from({ length: 12 }, () => `<circle cx="${f(92 + r1() * 56)}" cy="${f(100 + r1() * 66)}" r="${f(1.5 + r1() * 3)}" fill="#fff6d0" opacity=".7"/>`).join('');
@@ -321,32 +357,58 @@ const ART = {
     ${burst(186, 22, 12, 22, 8, '#f2b233')}${burst(186, 22, 8, 11, 4, '#fff4c0')}
     <text x="126" y="160" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="14" fill="#f4e6c8" transform="rotate(-90 126 160)">TNT</text>`),
 
-  volcanic: () => art(pistol({ len: 58, frame: 'url(#brass)', barrel: 'url(#blued)', lever: true })),
-  schofield: () => art(pistol({ len: 76, frame: 'url(#steel)', barrel: 'url(#steel)' })),
-  remington: () => art(pistol({ len: 96, frame: 'url(#blued)', barrel: 'url(#blued)', rod: true })),
-  carabine: () => art(rifle({ len: 78, receiver: 'url(#blued)', lever: false })),
-  winchester: () => art(rifle({ len: 104, receiver: 'url(#brass)', lever: true })),
+  volcanic: () => art(pistol({ len: 58, frame: 'url(#brass)', barrel: 'url(#blued)', lever: true }), { mono: true }),
+  schofield: () => art(pistol({ len: 76, frame: 'url(#steel)', barrel: 'url(#steel)' }), { mono: true }),
+  remington: () => art(pistol({ len: 96, frame: 'url(#blued)', barrel: 'url(#blued)', rod: true }), { mono: true }),
+  carabine: () => art(rifle({ len: 78, receiver: 'url(#blued)', lever: false }), { mono: true }),
+  winchester: () => art(rifle({ len: 104, receiver: 'url(#brass)', lever: true }), { mono: true }),
 };
 
 function frame(kind) {
-  const c = kind === 'blue' ? ['#2e6a96', '#10304e', '#9ccaf0'] : ['#8a5228', '#3e2412', '#f0c080'];
-  const r = rng(kind === 'blue' ? 11 : 7);
-  const stains = Array.from({ length: 6 }, () => `<ellipse cx="${f(20 + r() * 210)}" cy="${f(20 + r() * 310)}" rx="${f(10 + r() * 30)}" ry="${f(6 + r() * 18)}" fill="#7a4a1a" opacity=".07"/>`).join('');
+  const blue = kind === 'blue';
+  const c = blue ? ['#2f6d9a', '#0d2a45', '#9ccaf0'] : ['#8a5228', '#3a2210', '#f0c080'];
+  const r = rng(blue ? 11 : 7);
+  const scuff = Array.from({ length: 7 }, () => `<ellipse cx="${f(12 + r() * 226)}" cy="${f(12 + r() * 326)}" rx="${f(8 + r() * 26)}" ry="${f(4 + r() * 12)}" fill="#000" opacity=".06"/>`).join('');
   return svg(250, 350, `
     <rect width="250" height="350" rx="14" fill="url(#edge)"/>
-    <rect x="3" y="3" width="244" height="344" rx="12" fill="none" stroke="${c[2]}" stroke-opacity=".35" stroke-width="1.5"/>
-    <rect x="9" y="9" width="232" height="332" rx="9" fill="url(#pap)"/>
-    ${stains}
-    <rect x="9" y="9" width="232" height="332" rx="9" fill="#000" filter="url(#grain)" opacity=".18"/>
-    <rect x="9" y="9" width="232" height="332" rx="9" fill="none" stroke="${INK}" stroke-width="2"/>
-    <rect x="15" y="15" width="220" height="320" rx="6" fill="none" stroke="${c[0]}" stroke-width="1.4" stroke-dasharray="6 3"/>
-    <path d="M18 16H232L222 33L232 50H18L28 33Z" fill="url(#ribbon)" stroke="${INK}" stroke-width="2"/>
-    <path d="M30 20H220M30 46H220" stroke="${c[2]}" stroke-opacity=".4" stroke-width="1"/>
-    <rect x="21" y="53" width="208" height="164" fill="#000" stroke="${INK}" stroke-width="3"/>
-    <rect x="21" y="225" width="208" height="100" rx="5" fill="#fff8e4" fill-opacity=".5" stroke="${c[0]}" stroke-width="1.4"/>
-    ${[[18, 18], [232, 18], [18, 332], [232, 332]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="url(#brass)" stroke="${INK}" stroke-width="1.2"/>`).join('')}`, {
-    defs: DEFS + lin('edge', [[0, c[0]], [1, c[1]]], 0, 0, 1, 1) + lin('ribbon', [[0, c[0]], [1, c[1]]]),
+    ${scuff}
+    <rect width="250" height="350" rx="14" fill="#000" filter="url(#grain)" opacity=".16"/>
+    <rect x="3.5" y="3.5" width="243" height="343" rx="12" fill="none" stroke="${c[2]}" stroke-opacity=".4" stroke-width="1.5"/>
+    <rect x="9" y="9" width="232" height="332" rx="9" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="1"/>
+    <!-- 그림 자리 (위에 실제 그림이 덮인다) -->
+    <rect x="15" y="15" width="220" height="255" fill="#1a0e05"/>
+    <rect x="15" y="15" width="220" height="255" fill="none" stroke="${INK}" stroke-width="2.5"/>
+    <!-- 이름 명판 -->
+    <rect x="15" y="276" width="220" height="44" rx="4" fill="url(#plate)" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 281H228M22 315H228" stroke="${c[2]}" stroke-opacity=".35" stroke-width="1"/>
+    <!-- 아래쪽 장식 못 -->
+    ${[[24, 332], [226, 332]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="url(#brass)" stroke="${INK}" stroke-width="1.2"/>`).join('')}`, {
+    defs: DEFS + lin('edge', [[0, c[0]], [0.55, c[1]], [1, c[0]]], 0, 0, 1, 1) + lin('plate', [[0, c[0]], [1, c[1]]]),
   });
+}
+
+/**
+ * 갈색 카드에만 있는 총알 구멍. 그림 위에 겹쳐 올려서 카드를 뚫고 지나간 것처럼 보이게 한다.
+ * (실제 뱅에서 파란 테두리 카드는 총알 구멍이 없다)
+ */
+function bulletHoles() {
+  const r = rng(29);
+  const spots = [[27, 63], [223, 121], [21, 214], [229, 247], [46, 300], [204, 41]];
+  const body = spots.map(([x, y]) => {
+    const rot = f(r() * 360);
+    const rr = f(4.4 + r() * 1.8);
+    return `<g transform="translate(${x} ${y}) rotate(${rot})">
+      <ellipse rx="${f(rr + 3.4)}" ry="${f(rr + 2.6)}" fill="#000" opacity=".28"/>
+      <ellipse rx="${rr}" ry="${f(rr * 0.86)}" fill="#0d0603"/>
+      <path d="M${f(-rr - 2)} 0A${f(rr + 2)} ${f(rr + 1.6)} 0 0 1 ${f(rr + 2)} 0" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="1.3"/>
+      ${Array.from({ length: 5 }, (_, i) => {
+    const a = (i / 5) * Math.PI * 2 + r();
+    const d = rr + 1.5 + r() * 3.5;
+    return `<path d="M${f(Math.cos(a) * rr * 0.8)} ${f(Math.sin(a) * rr * 0.8)}L${f(Math.cos(a) * d)} ${f(Math.sin(a) * d)}" stroke="#0d0603" stroke-width="1.4" stroke-linecap="round" opacity=".75"/>`;
+  }).join('')}
+    </g>`;
+  }).join('');
+  return svg(250, 350, body);
 }
 
 function cardBack() {
@@ -367,4 +429,4 @@ function cardBack() {
   });
 }
 
-module.exports = { ART, frame, cardBack, suitShape, burst, sunRays, INK, DEFS, art };
+module.exports = { ART, frame, bulletHoles, cardBack, suitShape, burst, sunRays, INK, DEFS, art };

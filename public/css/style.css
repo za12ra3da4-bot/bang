@@ -302,22 +302,60 @@ body[data-screen="game"] .dust { opacity: .15; }
 .hand .bcard.selected { transform: translateY(-34px); box-shadow: 0 0 0 4px #e0483a, 0 0 24px rgba(224, 72, 58, .6); z-index: 6; }
 .hand-empty { color: var(--muted); align-self: center; font-size: 14px; }
 
-/* ───── 카드 */
-.bcard { --w: 120px; position: relative; display: block; width: var(--w); aspect-ratio: 250 / 350; container-type: inline-size; border-radius: 5.6% / 4%; flex: none; user-select: none; box-shadow: 0 6px 14px rgba(0, 0, 0, .5); }
+/* ───── 카드 (실제 뱅 카드 구조: 전면 일러스트 + 아래 이름 명판 + 갈색만 총알 구멍) */
+.bcard {
+  --w: 120px; position: relative; display: block; width: var(--w); aspect-ratio: 250 / 350;
+  container-type: inline-size; border-radius: 5.6% / 4%; flex: none; user-select: none;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .5);
+}
 .bcard .bc-frame { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-.bcard .bc-art { position: absolute; left: 8.8%; top: 15.4%; width: 82.4%; height: 46.3%; overflow: hidden; box-shadow: 0 0 0 .9cqw #2b1a0f; }
+/* 그림은 카드를 거의 가득 채운다 */
+.bcard .bc-art { position: absolute; left: 6%; top: 4.3%; width: 88%; height: 72.9%; overflow: hidden; }
 .bcard .bc-art img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-.bcard .bc-title { position: absolute; left: 11%; right: 11%; top: 4.6%; height: 9.7%; display: grid; place-items: center; font-family: var(--display); font-size: max(8px, 9.4cqw); line-height: 1; color: #fbeed0; text-shadow: 0 .6cqw 0 #000; white-space: nowrap; }
-.bcard .bc-suit { position: absolute; left: 11%; top: 54.5%; display: flex; align-items: center; gap: .8cqw; padding: .6cqw 2.4cqw; border-radius: 3cqw; background: #f6e7c4; border: .7cqw solid #2b1a0f; font-weight: 900; font-size: max(7px, 6.6cqw); line-height: 1; color: #2b1a0f; }
-.bcard .bc-suit.red { color: #b3261e; }
-.bcard .bc-range { position: absolute; right: 11%; top: 17%; display: flex; align-items: center; gap: .8cqw; padding: .6cqw 2.4cqw; border-radius: 3cqw; background: #10304e; border: .7cqw solid #9ccaf0; font-weight: 900; font-size: max(7px, 7cqw); color: #fff; line-height: 1; }
-.bcard .bc-desc { position: absolute; left: 10.8%; right: 10.8%; top: 65.2%; height: 27%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 5.1cqw; line-height: 1.32; color: #2b1a0f; font-weight: 500; overflow: hidden; }
+/* 총알 구멍은 그림 위에 겹친다 */
+.bcard .bc-holes { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+
+/* 왼쪽 위 작은 트럼프 표시 (판정!에 쓰는 무늬와 숫자) */
+.bcard .bc-pip {
+  position: absolute; left: 8.8%; top: 6.6%; display: flex; flex-direction: column; align-items: center;
+  gap: .4cqw; padding: 1.4cqw 1.8cqw; border-radius: 1.6cqw; line-height: 1;
+  background: #f6e7c4; border: .8cqw solid #2b1a0f; color: #2b1a0f; font-weight: 900;
+  box-shadow: 0 .8cqw 1.6cqw rgba(0, 0, 0, .45);
+}
+.bcard .bc-pip.red { color: #b3261e; }
+.bcard .bc-rank { font-size: max(8px, 8.2cqw); }
+.bcard .bc-pip .ic { width: 7cqw; height: 7cqw; }
+
+/* 무기 사거리는 조준경 안의 숫자 */
+.bcard .bc-sight {
+  position: absolute; right: 8.4%; top: 6.4%; width: 17cqw; height: 17cqw; display: grid; place-items: center;
+  border-radius: 50%; background: radial-gradient(circle, rgba(8, 20, 32, .92), rgba(8, 20, 32, .72));
+  border: .9cqw solid #cfe6fb; box-shadow: 0 0 0 .5cqw rgba(0, 0, 0, .55);
+}
+.bcard .bc-sight .ic { position: absolute; width: 14cqw; height: 14cqw; color: #cfe6fb; opacity: .55; }
+.bcard .bc-sight span { position: relative; font-weight: 900; font-size: max(9px, 9.5cqw); color: #fff; text-shadow: 0 0 .8cqw #000; }
+
+/* 효과 기호 줄 */
+.bcard .bc-icons {
+  position: absolute; left: 6%; right: 6%; bottom: 22.5%; display: flex; gap: 2cqw; justify-content: center;
+}
+.bcard .bc-icons .ic {
+  width: 11cqw; height: 11cqw; color: #f8ecd0;
+  filter: drop-shadow(0 0 1.2cqw rgba(0, 0, 0, .95)) drop-shadow(0 .6cqw .6cqw rgba(0, 0, 0, .8));
+}
+
+/* 이름 명판 */
+.bcard .bc-name {
+  position: absolute; left: 6%; right: 6%; top: 78.9%; height: 12.6%;
+  display: grid; place-items: center; font-family: var(--display); font-size: max(9px, 11cqw); line-height: 1;
+  color: #fbeed0; text-shadow: 0 .7cqw 0 rgba(0, 0, 0, .75); white-space: nowrap; letter-spacing: -.01em;
+}
 .bcard.back { background: url(../assets/card-back.svg) center / cover; }
-@container (max-width: 100px) {
-  .bc-desc { display: none; }
-  .bc-title { font-size: 11cqw; }
-  .bc-suit { font-size: 9cqw; top: 66%; }
-  .bc-range { font-size: 9cqw; }
+
+@container (max-width: 96px) {
+  .bc-icons { display: none; }
+  .bc-pip { padding: 1cqw 1.4cqw; }
+  .bc-name { font-size: 13cqw; }
 }
 
 /* ───── 룰 패널 */
@@ -468,3 +506,41 @@ li.on .rs-num { background: var(--gold); color: #2a1a08; }
   .rules-grid, .ref-grid { grid-template-columns: 1fr; }
   .role-table { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ───── 허브(보드게임 목록)로 돌아가기 */
+.back-hub {
+  position: fixed; left: 14px; bottom: 14px; z-index: 130;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 15px 9px 12px; border-radius: 999px;
+  background: linear-gradient(#3e2616, #22140a); border: 1px solid #8a5a28; color: var(--text);
+  font-size: 13px; font-weight: 700; text-decoration: none;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .55); opacity: .82;
+  transition: opacity .15s, border-color .15s, color .15s, transform .15s;
+}
+.back-hub .ic { transform: rotate(180deg); color: var(--gold); }
+.back-hub:hover { opacity: 1; border-color: var(--gold); color: var(--gold2); transform: translateY(-2px); }
+@media (max-width: 760px) { .back-hub { left: 8px; bottom: 8px; padding: 8px 12px; font-size: 12px; } }
+
+/* ───── 캐릭터 고르기 */
+.pickchar { text-align: center; }
+.pickchar .m-title { justify-content: center; }
+.pc-role { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 12px; background: #1a0f08; border: 1px solid #6a4424; margin-bottom: 4px; }
+.pc-role img { width: 46px; border-radius: 5px; border: 1px solid #000; }
+.pc-role b { font-size: 15px; color: var(--gold2); }
+.pc-role small { display: block; font-size: 12px; color: var(--muted); }
+.pc-grid { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.pc-card {
+  width: 250px; padding: 14px; border-radius: 16px; cursor: pointer; text-align: center;
+  background: linear-gradient(#32200f, #1e1209); border: 2px solid #6a4424; color: var(--text);
+  transition: transform .16s, border-color .16s, box-shadow .16s;
+}
+.pc-card:hover { transform: translateY(-5px); border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 18px 40px rgba(0, 0, 0, .6); }
+.pc-card img { width: 100%; border-radius: 12px; display: block; border: 1px solid #000; }
+.pc-card b { display: block; font-family: var(--display); font-weight: 400; font-size: 23px; color: var(--gold2); margin: 10px 0 2px; }
+.pc-hp { display: flex; gap: 2px; justify-content: center; margin: 4px 0 8px; }
+.pc-hp img { width: 11px; height: 24px; }
+.pc-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #e0cfb0; min-height: 62px; }
+.pc-card.taken { opacity: .45; cursor: default; transform: none; }
+.pc-wait { margin-top: 18px; color: var(--muted); font-size: 13.5px; }
+.pc-wait b { color: var(--gold2); }
+.pc-clock { font-family: var(--display); font-size: 26px; color: var(--gold2); }

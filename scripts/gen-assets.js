@@ -24,6 +24,7 @@ for (const [id, fn] of Object.entries(cards.ART)) write(`card/${id}.svg`, fn());
 write('frame-brown.svg', cards.frame('brown'));
 write('frame-blue.svg', cards.frame('blue'));
 write('card-back.svg', cards.cardBack());
+write('bullet-holes.svg', cards.bulletHoles());
 for (const [id, content] of Object.entries(ui.roles)) write(`role/${id}.svg`, content);
 for (const [id, content] of Object.entries(ui.icons)) write(`ui/${id}.svg`, content);
 for (const [id, content] of Object.entries(ui.rules)) write(`rules/${id}.svg`, content);

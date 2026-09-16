@@ -76,3 +76,5 @@ const SFX = (() => {
     unlock: () => ac(),
   };
 })();
+
+window.SFX = SFX;
